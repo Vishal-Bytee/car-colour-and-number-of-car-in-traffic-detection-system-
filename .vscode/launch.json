@@ -1,0 +1,20 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Run GUI",
+            "type": "python",
+            "request": "launch",
+            "program": "app.py",
+            "console": "integratedTerminal"
+        },
+        {
+            "name": "Test on image",
+            "type": "python",
+            "request": "launch",
+            "program": "test_detection.py",
+            "args": ["your_image.jpg"],
+            "console": "integratedTerminal"
+        }
+    ]
+}
