@@ -80,7 +80,7 @@ Save Output Image
 
 ### 1. Clone Repository
 bash
-git clone https://github.com/yourusername/car-colour-detection.git
+git clone https://github.com/Vishal-Bytee/car-colour-and-number-of-car-in-traffic-detection-system.git
 cd car-colour-detection
 
 
