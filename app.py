@@ -5,6 +5,10 @@ import numpy as np
 from PIL import Image, ImageTk
 import os
 import threading
+import matplotlib
+matplotlib.use("TkAgg")
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from utils.detector import detect_and_annotate
 from utils.model_loader import load_model
@@ -15,7 +19,7 @@ class CarDetectorApp:
         self.root = root
         self.root.title("Car Colour Detection")
         self.root.configure(bg="#0f0f13")
-        self.root.geometry("1100x650")
+        self.root.geometry("1100x800")
 
         self.img = None
         self.result = None
@@ -101,6 +105,22 @@ class CarDetectorApp:
                                     bg="#1a1a2e", fg="#718096")
         self.colour_text.pack(pady=(0, 6))
 
+        # chart area
+        chart_frame = tk.Frame(self.root, bg="#0f0f13")
+        chart_frame.pack(fill="x", padx=16, pady=(4, 0))
+
+        tk.Label(chart_frame, text="Colour Breakdown",
+                 font=("Courier New", 9), bg="#0f0f13", fg="#4a5568").pack(anchor="w", padx=4)
+
+        self.fig = Figure(figsize=(10, 1.8), dpi=90, facecolor="#0f0f13")
+        self.ax = self.fig.add_subplot(111)
+        self.ax.set_facecolor("#1a1a2e")
+        self.fig.subplots_adjust(left=0.08, right=0.98, top=0.85, bottom=0.2)
+
+        self.canvas = FigureCanvasTkAgg(self.fig, master=chart_frame)
+        self.canvas.get_tk_widget().pack(fill="x")
+        self.draw_empty_chart()
+
         self.status = tk.StringVar(value="load an image to get started")
         tk.Label(self.root, textvariable=self.status,
                  font=("Courier New", 8), bg="#0a0a0f", fg="#718096",
@@ -173,6 +193,7 @@ class CarDetectorApp:
             self.colour_text.config(
                 text="  |  ".join(f"{k}: {v}" for k, v in sorted(cc.items()))
             )
+            self.update_chart(cc)
 
         self.status.set(
             f"done — {stats['total_cars']} cars, "
@@ -211,12 +232,62 @@ class CarDetectorApp:
         label._ph = ph  # needed or tkinter garbage collects the image
         label.config(image=ph, text="")
 
+    def draw_empty_chart(self):
+        self.ax.clear()
+        self.ax.set_facecolor("#1a1a2e")
+        self.ax.text(0.5, 0.5, "no data yet — run analyse",
+                     ha="center", va="center", color="#4a5568",
+                     fontsize=9, transform=self.ax.transAxes)
+        self.ax.set_xticks([])
+        self.ax.set_yticks([])
+        for spine in self.ax.spines.values():
+            spine.set_visible(False)
+        self.canvas.draw()
+
+    def update_chart(self, color_counts):
+        self.ax.clear()
+        self.ax.set_facecolor("#1a1a2e")
+
+        colours = sorted(color_counts.keys())
+        counts  = [color_counts[c] for c in colours]
+
+        # map colour names to actual bar colours
+        bar_colours = {
+            "red":     "#f56565",
+            "blue":    "#63b3ed",
+            "white":   "#e2e8f0",
+            "black":   "#718096",
+            "silver":  "#a0aec0",
+            "yellow":  "#f6e05e",
+            "green":   "#68d391",
+            "unknown": "#4a5568",
+        }
+        bar_clrs = [bar_colours.get(c, "#a0aec0") for c in colours]
+
+        bars = self.ax.barh(colours, counts, color=bar_clrs, height=0.5)
+
+        # add count labels at end of each bar
+        for bar, count in zip(bars, counts):
+            self.ax.text(bar.get_width() + 0.05, bar.get_y() + bar.get_height()/2,
+                         str(count), va="center", color="#e2e8f0", fontsize=8)
+
+        self.ax.set_xlabel("count", color="#4a5568", fontsize=8)
+        self.ax.tick_params(colors="#718096", labelsize=8)
+        self.ax.set_xlim(0, max(counts) + 1.5)
+
+        for spine in self.ax.spines.values():
+            spine.set_color("#2d3748")
+
+        self.fig.patch.set_facecolor("#0f0f13")
+        self.canvas.draw()
+
     def reset_stats(self):
         self.v_total.set("0")
         self.v_blue.set("0")
         self.v_other.set("0")
         self.v_people.set("0")
         self.colour_text.config(text="")
+        self.draw_empty_chart()
 
 
 if __name__ == "__main__":
